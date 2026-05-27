@@ -11,7 +11,12 @@ export const executeAgentTool = async (tool, payload) => {
     try {
       switch (tool) {
         case 'read_file':
+          // Rust: read_local_file(path: String) -> Result<String, String>
           return await invoke('read_local_file', { path: payload.filePath });
+
+        case 'run_script':
+          // Rust: run_local_script(script_name: String) -> Result<String, String>
+          return await invoke('run_local_script', { scriptName: payload.scriptName });
 
         case 'write_file':
           return await invoke('write_local_file', { path: payload.filePath, content: payload.content });
