@@ -1,0 +1,30 @@
+{
+  "name": "Workflow",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "The user who owns this workflow"
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the workflow"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the workflow"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the workflow is currently active"
+    },
+    "yaml_config": {
+      "type": "string",
+      "description": "YAML configuration for the workflow"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

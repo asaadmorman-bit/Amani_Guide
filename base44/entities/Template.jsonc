@@ -1,0 +1,39 @@
+{
+  "name": "Template",
+  "type": "object",
+  "properties": {
+    "author_name": {
+      "type": "string",
+      "description": "Author of the template"
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the template"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "SecOps",
+        "Daily Organization",
+        "DevOps",
+        "Data Pipeline",
+        "Monitoring",
+        "Communication"
+      ],
+      "description": "Category of the template"
+    },
+    "yaml_config": {
+      "type": "string",
+      "description": "YAML configuration for the template"
+    },
+    "downloads": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of downloads"
+    }
+  },
+  "required": [
+    "title",
+    "category"
+  ]
+}
