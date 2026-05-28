@@ -1,8 +1,24 @@
-#env
+# ─── AMANI SECURE INFRASTRUCTURE VAULTS ─────────────────────────────
+# Prevents local WebAssembly relational data engines from leaking to GitHub
+base_amani_vault_data/
+*.db
+*.db-journal
+/src/config/integration_*.json
+/release/
+
+# ─── ENVIRONMENT & SECRET TOKENS ──────────────────────────────────
 .env
 .env.*
+.env.local
+.vite
 
-# Logs
+# ─── COMPILATION BUILD OUTPUTS ────────────────────────────────────
+node_modules
+dist
+dist-ssr
+/src/generated/prisma
+
+# ─── PACKAGE MANAGER LOGS ─────────────────────────────────────────
 /logs
 *.log
 npm-debug.log*
@@ -11,12 +27,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# ─── SYSTEM & EDITOR DIRECTORIES ──────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -26,6 +37,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-.env
-.vite
