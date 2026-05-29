@@ -1,0 +1,253 @@
+{
+  "blueprints": [
+    {
+      "id": "blueprint_default_1",
+      "name": "Production Repository Security Scan",
+      "createdAt": "2026-05-27T18:10:35.887Z",
+      "nodes": [
+        {
+          "id": "trigger_1",
+          "position": {
+            "x": 380,
+            "y": 30
+          },
+          "data": {
+            "label": "🚀 Manual Trigger"
+          },
+          "type": "input",
+          "style": {
+            "backgroundColor": "#1e293b",
+            "color": "#fff",
+            "border": "1px solid #475569",
+            "borderRadius": "8px"
+          }
+        }
+      ],
+      "edges": []
+    },
+    {
+      "id": "blueprint_1779935630577",
+      "name": "Enterprise Ops Blueprint",
+      "createdAt": "2026-05-28T02:33:50.577Z",
+      "nodes": [
+        {
+          "id": "trigger_1",
+          "position": {
+            "x": 380,
+            "y": 30
+          },
+          "data": {
+            "label": "🚀 Manual Trigger"
+          },
+          "type": "input",
+          "style": {
+            "backgroundColor": "#1e293b",
+            "color": "#fff",
+            "border": "1px solid #475569",
+            "borderRadius": "8px"
+          },
+          "measured": {
+            "width": 150,
+            "height": 39
+          }
+        },
+        {
+          "id": "action_2",
+          "type": "actionNode",
+          "position": {
+            "x": 291.25,
+            "y": 139
+          },
+          "data": {
+            "actionType": "email",
+            "title": "Automated Operations Briefing",
+            "assignee": "Project Manager"
+          },
+          "measured": {
+            "width": 271,
+            "height": 265
+          }
+        },
+        {
+          "id": "org_3",
+          "type": "orgNode",
+          "position": {
+            "x": 516.25,
+            "y": -88
+          },
+          "data": {
+            "roleTitle": "System Architect",
+            "dept": "Engineering",
+            "responsibilities": "Audit infrastructure nodes."
+          },
+          "measured": {
+            "width": 396,
+            "height": 224
+          },
+          "selected": false,
+          "dragging": false
+        }
+      ],
+      "edges": [
+        {
+          "source": "trigger_1",
+          "target": "action_2",
+          "animated": true,
+          "id": "xy-edge__trigger_1-action_2"
+        },
+        {
+          "source": "trigger_1",
+          "target": "org_3",
+          "animated": true,
+          "id": "xy-edge__trigger_1-org_3"
+        }
+      ]
+    }
+  ],
+  "secure_compliance_logs": [
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:08:35.825Z",
+      "authorized_by": "secops_bot_alpha",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:10:35.763Z",
+      "authorized_by": "secops_bot_alpha",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:21:41.943Z",
+      "authorized_by": "audit_shadow_runner",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:23:41.922Z",
+      "authorized_by": "compliance_daemon",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:25:41.923Z",
+      "authorized_by": "audit_shadow_runner",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:27:41.928Z",
+      "authorized_by": "audit_shadow_runner",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:29:41.930Z",
+      "authorized_by": "secops_bot_alpha",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:31:41.932Z",
+      "authorized_by": "compliance_daemon",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:33:41.931Z",
+      "authorized_by": "compliance_daemon",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:35:41.937Z",
+      "authorized_by": "compliance_daemon",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:37:41.942Z",
+      "authorized_by": "compliance_daemon",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:39:41.943Z",
+      "authorized_by": "secops_bot_alpha",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:41:41.942Z",
+      "authorized_by": "audit_shadow_runner",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:43:41.951Z",
+      "authorized_by": "audit_shadow_runner",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:45:41.954Z",
+      "authorized_by": "secops_bot_alpha",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:47:41.955Z",
+      "authorized_by": "compliance_daemon",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "PIPELINE_EXECUTION_AUTHORIZED",
+      "timestamp": "2026-05-28T04:49:41.958Z",
+      "authorized_by": "secops_bot_alpha",
+      "hitl_override_applied": true
+    },
+    {
+      "event": "SECURE_PIPELINE_PROVISIONED",
+      "timestamp": "2026-05-28T18:32:27.314Z",
+      "operator": "continuous_compliance_bot",
+      "specIntegrityHash": "6eddcb81280bce7cf456ddb9953999a40510a46d54cf809556345bd7a9ae4bbd",
+      "status": "COMPLIANT_SUCCESS"
+    },
+    {
+      "event": "SECURE_PIPELINE_PROVISIONED",
+      "timestamp": "2026-05-28T18:32:27.326Z",
+      "operator": "continuous_compliance_bot",
+      "specIntegrityHash": "2314b16696d763f521449fb5ace0663ac8b9d8adcc82c7e56ef2053ebd7d02c6",
+      "status": "COMPLIANT_SUCCESS"
+    },
+    {
+      "event": "SECURE_PIPELINE_PROVISIONED",
+      "timestamp": "2026-05-28T18:35:27.276Z",
+      "operator": "continuous_compliance_bot",
+      "specIntegrityHash": "6eddcb81280bce7cf456ddb9953999a40510a46d54cf809556345bd7a9ae4bbd",
+      "status": "COMPLIANT_SUCCESS"
+    },
+    {
+      "event": "SECURE_PIPELINE_PROVISIONED",
+      "timestamp": "2026-05-28T18:35:27.283Z",
+      "operator": "continuous_compliance_bot",
+      "specIntegrityHash": "2314b16696d763f521449fb5ace0663ac8b9d8adcc82c7e56ef2053ebd7d02c6",
+      "status": "COMPLIANT_SUCCESS"
+    },
+    {
+      "event": "SECURE_PIPELINE_PROVISIONED",
+      "timestamp": "2026-05-28T19:07:44.229Z",
+      "operator": "devsecops_lead_amani",
+      "specIntegrityHash": "c4bf596e0cb393d40f869b2552b71a18db24c756468018a9e50f41eb27f848b3",
+      "status": "COMPLIANT_SUCCESS"
+    },
+    {
+      "event": "SECURE_PIPELINE_PROVISIONED",
+      "timestamp": "2026-05-28T19:13:28.406Z",
+      "operator": "devsecops_lead_amani",
+      "specIntegrityHash": "c4bf596e0cb393d40f869b2552b71a18db24c756468018a9e50f41eb27f848b3",
+      "status": "COMPLIANT_SUCCESS"
+    }
+  ]
+}

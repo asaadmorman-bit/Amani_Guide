@@ -1,0 +1,111 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+model User {
+  id               String               @id @default(uuid())
+  username         String               @unique
+  role             String               
+  backgroundField  String               @default("General")
+  blueprints       Blueprint[]
+  auditLogs        SecureComplianceLog[]
+  wearableDevices  SmartDevice[]
+  sharedPosts      CommunityHubPost[]
+
+  @@map("user")
+}
+
+model Blueprint {
+  id          String   @id @default(uuid())
+  name        String
+  yamlConfig  String
+  createdAt   DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("blueprint")
+}
+
+model SecureComplianceLog {
+  id                String   @id @default(uuid())
+  event             String   
+  timestamp         DateTime @default(now())
+  specIntegrityHash String
+  roleContext       String   
+  status            String   
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("securecompliancelog")
+}
+
+model SmartDevice {
+  id               String   @id @default(uuid())
+  deviceName       String   
+  deviceType       String   
+  currentHeartRate Int?
+  stressLevelScore Int? 
+  lastSyncedAt     DateTime @default(now())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("smartdevice")
+}
+
+model CommunityHubPost {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  tag       String   
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("communityhubpost")
+}
+
+model ExternalStreamEvent {
+  id              String   @id @default(uuid())
+  title           String   
+  category        String   
+  impactScore     Int      @default(50) 
+  geoLatitude     Float?
+  geoLongitude    Float?
+  estimatedStart  DateTime
+  estimatedEnd    DateTime
+  isPublicSafe    Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@map("externalstreamevent")
+}
+
+model PhysicalTelemetryEvent {
+  id              String   @id @default(uuid())
+  title           String   
+  eventType       String   
+  severityIndex   Int      @default(50) 
+  latitude        Float
+  longitude       Float
+  radiusMeters    Int      @default(1000) 
+  isActive        Boolean  @default(true)
+  updatedAt       DateTime @default(now())
+
+  @@map("physicaltelemetryevent")
+}
+
+model GlobalCyberAlert {
+  id                String   @id @default(uuid())
+  title             String   
+  cveId             String?  
+  severity          String   
+  affectedComponent String   
+  remediationSteps  String
+  createdAt         DateTime @default(now())
+
+  @@map("globalcyberalert")
+}

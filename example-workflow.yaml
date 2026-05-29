@@ -1,0 +1,24 @@
+name: "GitHub_Repo_Analyzer"
+description: "Fetches live data from GitHub and summarizes the work."
+trigger: 
+  type: "manual"
+agents:
+  - id: "data_fetcher"
+    model: "claude-3.5-sonnet"
+    role: "You extract raw data from external APIs."
+  - id: "summarizer"
+    model: "gpt-4o"
+    role: "You format JSON data into a clean, readable list."
+tools:
+  - mcp_server: "github_api_reader"
+steps:
+  - step_id: "fetch_issues"
+    agent: "data_fetcher"
+    action: "USE_TOOL: github_api_reader" # The engine will intercept this!
+    output_key: "raw_github_data"
+    next_step: "format_summary"
+
+  - step_id: "format_summary"
+    agent: "summarizer"
+    action: "Look at this raw API data: {raw_github_data}. Format it into a clean summary."
+    output_key: "final_brief"

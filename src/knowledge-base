@@ -1,0 +1,5 @@
+{
+  "decision": "REFUSED",
+  "context": "Architect blocked deployment of public webhooks touching client metadata because it violated localized data residency constraints.",
+  "learnt_rule_weight": "High"
+}
