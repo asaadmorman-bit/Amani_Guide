@@ -7,6 +7,7 @@ import { Search, Library, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import TemplateCard from '../components/templates/TemplateCard';
+import GitHubImportPanel from '../components/templates/GitHubImportPanel';
 
 const CATEGORIES = ['All', 'SecOps', 'Daily Organization', 'DevOps', 'Data Pipeline', 'Monitoring', 'Communication'];
 
@@ -31,6 +32,17 @@ export default function TemplateLibrary() {
       t.author_name?.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const handleGitHubImport = async ({ name, yaml_config }) => {
+    await base44.entities.Workflow.create({
+      user_id: user.email,
+      title: name,
+      description: 'Imported from GitHub',
+      is_active: false,
+      yaml_config,
+    });
+    toast.success(`"${name}" added to My Workflows`);
+  };
 
   const handleClone = async (template) => {
     if (!user?.email) {
@@ -60,6 +72,9 @@ export default function TemplateLibrary() {
         <h1 className="text-2xl font-bold font-mono text-foreground tracking-tight">Template Library</h1>
         <p className="text-sm text-muted-foreground mt-1">Browse and clone community-built workflow templates</p>
       </div>
+
+      {/* GitHub Import */}
+      <GitHubImportPanel user={user} onImport={handleGitHubImport} />
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
