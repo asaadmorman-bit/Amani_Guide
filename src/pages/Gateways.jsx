@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import GatewayCard from '../components/gateways/GatewayCard';
+import GatewayDashboard from '../components/gateways/GatewayDashboard';
 
 export default function Gateways() {
   const [showAdd, setShowAdd] = useState(false);
@@ -59,21 +60,8 @@ export default function Gateways() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="flex gap-6 mb-8 pb-6 border-b border-border">
-        <div>
-          <span className="text-2xl font-mono font-bold text-foreground">{gateways.length}</span>
-          <span className="text-xs text-muted-foreground ml-2">Total</span>
-        </div>
-        <div>
-          <span className="text-2xl font-mono font-bold text-chart-2">{gateways.filter(g => g.status === 'online').length}</span>
-          <span className="text-xs text-muted-foreground ml-2">Online</span>
-        </div>
-        <div>
-          <span className="text-2xl font-mono font-bold text-muted-foreground">{gateways.filter(g => g.status === 'offline').length}</span>
-          <span className="text-xs text-muted-foreground ml-2">Offline</span>
-        </div>
-      </div>
+      {/* Dashboard Charts */}
+      <GatewayDashboard gateways={gateways} />
 
       {/* Grid */}
       {isLoading ? (
