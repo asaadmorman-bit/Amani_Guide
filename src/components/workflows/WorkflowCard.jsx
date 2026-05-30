@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Zap, Clock } from 'lucide-react';
+import { Pencil, Trash2, Zap, Clock, ScrollText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+import WorkflowLogPanel from './WorkflowLogPanel';
 
 export default function WorkflowCard({ workflow, onToggle, onEdit, onDelete }) {
+  const [showLogs, setShowLogs] = useState(false);
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -56,6 +58,15 @@ export default function WorkflowCard({ workflow, onToggle, onEdit, onDelete }) {
               <Button
                 size="icon"
                 variant="ghost"
+                className={`h-7 w-7 transition-colors ${showLogs ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                onClick={() => setShowLogs(v => !v)}
+                title="Run history"
+              >
+                <ScrollText className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 className="h-7 w-7 text-muted-foreground hover:text-primary"
                 onClick={() => onEdit(workflow)}
               >
@@ -71,6 +82,9 @@ export default function WorkflowCard({ workflow, onToggle, onEdit, onDelete }) {
               </Button>
             </div>
           </div>
+          {showLogs && (
+            <WorkflowLogPanel workflowId={workflow.id} workflowTitle={workflow.title} />
+          )}
         </CardContent>
       </Card>
     </motion.div>

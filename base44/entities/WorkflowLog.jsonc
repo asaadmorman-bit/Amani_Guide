@@ -1,0 +1,40 @@
+{
+  "name": "WorkflowLog",
+  "type": "object",
+  "properties": {
+    "workflow_id": {
+      "type": "string",
+      "description": "ID of the workflow this log belongs to"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "running"
+      ],
+      "description": "Outcome of the run"
+    },
+    "triggered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the workflow was triggered"
+    },
+    "duration_ms": {
+      "type": "number",
+      "description": "How long the run took in milliseconds"
+    },
+    "message": {
+      "type": "string",
+      "description": "Log message or error details"
+    },
+    "trigger_source": {
+      "type": "string",
+      "description": "What triggered this run (e.g. manual, schedule, webhook)"
+    }
+  },
+  "required": [
+    "workflow_id",
+    "status"
+  ]
+}
