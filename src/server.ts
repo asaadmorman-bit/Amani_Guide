@@ -61,6 +61,7 @@ app.use((req, res, next) => {
     req.path === '/api/community/feed' || 
     req.path === '/api/auditor-evidence' || 
     req.path.startsWith('/api/approvals') ||
+    req.path === '/dashboard' ||
     req.method === 'GET'
   ) {
     return next();
@@ -518,6 +519,218 @@ app.post('/api/security/physical-incident', async (req, res) => {
     
     return res.json({ success: true, incidentId: incident.id, perimeterStatus: (distanceKm <= radiusMeters / 1000 && severityIndex > 50) ? "LOCAL_PERIMETER_BREACH_WARNING" : "PERIMETER_SAFE" });
   } catch (error: any) { return res.status(500).json({ error: error.message }); }
+});
+
+// ─── 🎨 UNIFIED ADMINISTRATIVE VISUALIZATION DASHBOARD ──────────────
+app.get('/dashboard', (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amani Secure Mesh Control Center</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    pre, code { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-900">
+
+  <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="h-3 w-3 rounded-full bg-cyan-400 animate-pulse"></div>
+      <h1 class="text-lg font-semibold tracking-tight text-slate-100">AMANI // <span class="text-cyan-400 font-medium">SECURE MESH OPERATOR</span></h1>
+    </div>
+    <div class="flex items-center space-x-4 text-xs text-slate-400">
+      <div>DOMAIN CLEARANCE: <span class="text-slate-200 font-mono font-bold">EMERGING_DEFENSE_LEVEL_01</span></div>
+    </div>
+  </header>
+
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-bold tracking-wider text-slate-400 uppercase flex items-center gap-2">🛑 HITL Agent Interception Desk</h2>
+          <span id="hitl-count" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700">0 Pending</span>
+        </div>
+        <div id="hitl-container" class="space-y-4">
+          <div class="text-sm text-slate-500 py-4 text-center border border-dashed border-slate-800 rounded-lg">
+            No active Human-In-The-Loop workflow exceptions intercepted. Systems idling normally.
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-bold tracking-wider text-slate-400 uppercase">📡 Live Device Stream Index</h2>
+          <button onclick="fetchAuditorData()" class="text-xs text-cyan-400 hover:text-cyan-300 font-medium transition cursor-pointer">Force Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 font-medium text-xs uppercase tracking-wider">
+                <th class="py-3 px-4">Operator</th>
+                <th class="py-3 px-4">Metric Event Type</th>
+                <th class="py-3 px-4">Integrity Token</th>
+                <th class="py-3 px-4 text-right">Status State</th>
+              </tr>
+            </thead>
+            <tbody id="telemetry-rows" class="divide-y divide-slate-800/50">
+              <tr><td colspan="4" class="py-6 px-4 text-center text-slate-500">Connecting downstream ledger sockets...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="space-y-6">
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col justify-between">
+        <div>
+          <h2 class="text-sm font-bold tracking-wider text-slate-400 uppercase mb-4">🛡️ Guardrail Compliance Summary</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-950 p-4 border border-slate-800/80 rounded-lg">
+              <div class="text-xs text-slate-500 font-medium">Compliant Blocks</div>
+              <div id="metric-compliant" class="text-2xl font-bold text-emerald-400 font-mono mt-1">0</div>
+            </div>
+            <div class="bg-slate-950 p-4 border border-slate-800/80 rounded-lg">
+              <div class="text-xs text-slate-500 font-medium">AI Self-Healed</div>
+              <div id="metric-healed" class="text-2xl font-bold text-cyan-400 font-mono mt-1">0</div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-6 border-t border-slate-800 pt-4">
+          <div class="text-xs text-slate-500 flex justify-between items-center">
+            <span>Enterprise Mesh Engine:</span>
+            <span class="text-emerald-400 font-mono">ONLINE // COMPLIANT</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = '/api';
+
+    async function fetchHitlTickets() {
+      try {
+        const response = await fetch(\`\${API_BASE}/approvals/pending\`);
+        const data = await response.json();
+        const container = document.getElementById('hitl-container');
+        const badge = document.getElementById('hitl-count');
+        
+        if (!data.success || data.tickets.length === 0) {
+          badge.textContent = '0 Pending';
+          badge.className = 'px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700';
+          container.innerHTML = \`
+            <div class="text-sm text-slate-500 py-6 text-center border border-dashed border-slate-800 rounded-lg">
+              No active Human-In-The-Loop workflow exceptions intercepted. Systems idling normally.
+            </div>\`;
+          return;
+        }
+
+        badge.textContent = \`\${data.tickets.length} Pending\`;
+        badge.className = 'px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs font-mono border border-amber-500/20';
+        
+        container.innerHTML = data.tickets.map(ticket => \`
+          <div class="bg-slate-950 border border-slate-800/80 rounded-lg p-4 space-y-3">
+            <div class="flex items-center justify-between text-xs">
+              <div class="text-slate-400">ID: <span class="text-slate-200 font-mono font-bold">\${ticket.ticketId}</span></div>
+              <div class="px-2 py-0.5 rounded bg-slate-900 text-amber-400 font-mono font-medium border border-slate-800">\${ticket.roleContext}</div>
+            </div>
+            <div class="text-sm text-slate-300">
+              Operator <span class="text-cyan-400 font-semibold font-mono">\${ticket.operator}</span> requested a semi-autonomous action loop execution.
+            </div>
+            <div class="bg-slate-900 p-3 rounded border border-slate-800/50">
+              <pre class="text-xs text-slate-400 overflow-x-auto whitespace-pre-wrap font-mono">\---\n\${ticket.yamlConfig}</pre>
+            </div>
+            <div class="flex items-center space-x-3 pt-1">
+              <button onclick="resolveTicket('\${ticket.ticketId}', 'APPROVE')" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs py-2 px-4 rounded transition cursor-pointer">
+                Authorize Stream Dispatch
+              </button>
+              <button onclick="resolveTicket('\${ticket.ticketId}', 'REJECT')" class="bg-slate-900 hover:bg-slate-800 text-rose-400 font-medium text-xs py-2 px-4 rounded border border-slate-800 transition cursor-pointer">
+                Reject
+              </button>
+            </div>
+          </div>
+        \`).join('');
+      } catch (err) {
+        console.error("Error updating HITL matrix components:", err);
+      }
+    }
+
+    async function resolveTicket(ticketId, action) {
+      try {
+        const response = await fetch(\`\${API_BASE}/approvals/authorize\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticketId, action })
+        });
+        const data = await response.json();
+        if (data.success) {
+          fetchHitlTickets();
+          fetchAuditorData();
+        } else {
+          alert("Authorization override failed: " + data.error);
+        }
+      } catch (err) {
+        alert("Network failure processing admin action ticket.");
+      }
+    }
+
+    async function fetchAuditorData() {
+      try {
+        const response = await fetch(\`\${API_BASE}/auditor-evidence\`);
+        const data = await response.json();
+        
+        if (!data.success) return;
+        
+        let compliantCount = 0;
+        let healedCount = 0;
+        
+        const rows = data.evidence.historicalAuditTrails.map(log => {
+          if (log.status === 'COMPLIANT_SUCCESS' || log.event === 'HITL_WORKFLOW_APPROVED') compliantCount++;
+          if (log.status === 'HEALED_SUCCESS' || log.event === 'AUTOMATED_POLICY_REMEDIATION') healedCount++;
+          
+          let badgeClass = "bg-slate-900 text-slate-400 border-slate-800";
+          if (log.status === 'COMPLIANT_SUCCESS' || log.event === 'HITL_WORKFLOW_APPROVED') badgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+          if (log.status === 'HEALED_SUCCESS' || log.event === 'AUTOMATED_POLICY_REMEDIATION') badgeClass = "bg-cyan-500/10 text-cyan-400 border-cyan-500/20";
+          if (log.status === 'BLOCKED_VIOLATION' || log.event === 'HITL_WORKFLOW_REJECTED') badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+          if (log.status === 'PENDING_HITL' || log.event === 'EXECUTION_PAUSED_HITL') badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+
+          return \`
+            <tr class="hover:bg-slate-900/30 transition text-slate-300">
+              <td class="py-3 px-4 font-mono text-xs">\${log.operator}</td>
+              <td class="py-3 px-4 font-medium font-mono text-xs">\${log.event}</td>
+              <td class="py-3 px-4 font-mono text-xs text-slate-500">\${log.specIntegrityHash.substring(0, 12)}...</td>
+              <td class="py-3 px-4 text-right">
+                <span class="px-2 py-0.5 rounded text-xs font-mono font-medium border \${badgeClass}">\${log.status}</span>
+              </td>
+            </tr>\`;
+        }).reverse().join('');
+
+        document.getElementById('telemetry-rows').innerHTML = rows || \`
+          <tr><td colspan="4" class="py-6 px-4 text-center text-slate-500">No telemetry log footprints found in storage memory.</td></tr>\`;
+          
+        document.getElementById('metric-compliant').textContent = compliantCount;
+        document.getElementById('metric-healed').textContent = healedCount;
+      } catch (err) {
+        console.error("Downstream ledger pull failed:", err);
+      }
+    }
+
+    fetchHitlTickets();
+    fetchAuditorData();
+    setInterval(fetchHitlTickets, 2500);
+    setInterval(fetchAuditorData, 2500);
+  </script>
+</body>
+</html>
+  `);
 });
 
 // ─── 🚀 THE BLOCKING SYNCHRONOUS BOOTSTRAP ENGINE ───────────────────
