@@ -8,36 +8,37 @@ generator client {
 }
 
 model User {
-  id               String               @id @default(uuid())
-  username         String               @unique
-  role             String               
-  backgroundField  String               @default("General")
-  blueprints       Blueprint[]
-  auditLogs        SecureComplianceLog[]
-  wearableDevices  SmartDevice[]
-  sharedPosts      CommunityHubPost[]
+  id                 String              @id @default(uuid())
+  username           String              @unique
+  role               String
+  backgroundField    String
+  biometricSnapshots BiometricSnapshot[]
+  blueprints         Blueprint[]
+  secureComplianceLogs SecureComplianceLog[]
+  smartDevices       SmartDevice[]
+  communityHubPosts  CommunityHubPost[]
 
-  @@map("user")
+  @@map("User")
 }
 
 model Blueprint {
-  id          String   @id @default(uuid())
-  name        String
-  yamlConfig  String
-  createdAt   DateTime @default(now())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  name       String
+  yamlConfig String
+  createdAt  DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("blueprint")
 }
 
 model SecureComplianceLog {
   id                String   @id @default(uuid())
-  event             String   
+  event             String
   timestamp         DateTime @default(now())
   specIntegrityHash String
-  roleContext       String   
-  status            String   
+  roleContext       String
+  status            String
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -46,10 +47,10 @@ model SecureComplianceLog {
 
 model SmartDevice {
   id               String   @id @default(uuid())
-  deviceName       String   
-  deviceType       String   
+  deviceName       String
+  deviceType       String
   currentHeartRate Int?
-  stressLevelScore Int? 
+  stressLevelScore Int?
   lastSyncedAt     DateTime @default(now())
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -61,7 +62,7 @@ model CommunityHubPost {
   id        String   @id @default(uuid())
   title     String
   content   String
-  tag       String   
+  tag       String
   createdAt DateTime @default(now())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -70,42 +71,58 @@ model CommunityHubPost {
 }
 
 model ExternalStreamEvent {
-  id              String   @id @default(uuid())
-  title           String   
-  category        String   
-  impactScore     Int      @default(50) 
-  geoLatitude     Float?
-  geoLongitude    Float?
-  estimatedStart  DateTime
-  estimatedEnd    DateTime
-  isPublicSafe    Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  title          String
+  category       String
+  impactScore    Int      @default(50)
+  geoLatitude    Float?
+  geoLongitude   Float?
+  estimatedStart DateTime
+  estimatedEnd   DateTime
+  isPublicSafe   Boolean  @default(true)
+  createdAt      DateTime @default(now())
 
   @@map("externalstreamevent")
 }
 
 model PhysicalTelemetryEvent {
-  id              String   @id @default(uuid())
-  title           String   
-  eventType       String   
-  severityIndex   Int      @default(50) 
-  latitude        Float
-  longitude       Float
-  radiusMeters    Int      @default(1000) 
-  isActive        Boolean  @default(true)
-  updatedAt       DateTime @default(now())
+  id            String   @id @default(uuid())
+  title         String
+  eventType     String
+  severityIndex Int      @default(50)
+  latitude      Float
+  longitude     Float
+  radiusMeters  Int      @default(1000)
+  isActive      Boolean  @default(true)
+  updatedAt     DateTime @default(now())
 
   @@map("physicaltelemetryevent")
 }
 
 model GlobalCyberAlert {
   id                String   @id @default(uuid())
-  title             String   
-  cveId             String?  
-  severity          String   
-  affectedComponent String   
+  title             String
+  cveId             String?
+  severity          String
+  affectedComponent String
   remediationSteps  String
   createdAt         DateTime @default(now())
 
   @@map("globalcyberalert")
+}
+
+model BiometricSnapshot {
+  id               String   @id @default(uuid())
+  userId           String
+  timestamp        DateTime @default(now())
+  hrv              Float?   
+  restingHeartRate Int?     
+  sleepScore       Float?   
+  deepSleepMins    Int?     
+  remSleepMins     Int?     
+  activityBurn     Float?   
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@map("biometricsnapshot")
 }

@@ -53,7 +53,7 @@ function verifyEnterpriseSignature(payload: string, incomingSignature: string): 
 
 // Global Enterprise Security Enforcement Middleware
 app.use((req, res, next) => {
-  if (req.path === '/api/knowledge-sync' || req.path === '/api/community/feed' || req.method === 'GET') {
+  if (req.path === '/api/knowledge-sync' || req.path === '/api/community/feed' || req.path === '/api/auditor-evidence' || req.method === 'GET') {
     return next();
   }
 
@@ -94,7 +94,7 @@ async function getOrCreateTenantUser(username: string, role: string) {
   let user = await prisma.user.findUnique({ where: { username } });
   if (!user) {
     user = await prisma.user.create({
-      data: { username, role }
+      data: { username, role, backgroundField: "General" }
     });
   }
   return user;
@@ -195,7 +195,7 @@ app.post('/api/tandem-build', async (req, res) => {
     
     console.log(`🛰️ [安全网关] Evaluation intercept initiated for actor: [${username}] (${role})`);
 
-    const allowedRoles = ['System_Architect', 'Business_Owner', 'Exec_Assistant', 'Family_Lead', 'Academic_Faculty', 'Academic_Student'];
+    const allowedRoles = ['System_Architect', 'Business_Owner', 'Exec_Assistant', 'Family_Lead', 'Academic_Faculty', 'Academic_Student', 'Personal_User'];
     if (!userCredentials || !allowedRoles.includes(userCredentials.role)) {
       return res.status(403).json({ success: false, error: "Access Denied: Operating identity fails RBAC verification gates." });
     }
@@ -224,6 +224,17 @@ app.post('/api/tandem-build', async (req, res) => {
           logs: evalResult.errors.map(v => `✨ [AUTO-REMEDIATION] Fixed rule conflict: ${v}`).join('\n')
         });
       }
+      
+      await prisma.secureComplianceLog.create({
+        data: {
+          event: "COMPLIANCE_VIOLATION_HALT",
+          specIntegrityHash: "failed_comp_block",
+          roleContext: role,
+          status: "BLOCKED_VIOLATION",
+          userId: tenantUser.id
+        }
+      });
+      
       return res.status(422).json({ success: false, error: "Compliance boundary halt.", logs: evalResult.errors.join('\n') });
     }
 
@@ -252,6 +263,7 @@ app.post('/api/tandem-build', async (req, res) => {
       summary: `### 🛡️ Secure Mesh Synchronized cleanly\nWorkspace parameters successfully validated.`
     });
   } catch (error: any) {
+    console.error("🚨 [CRITICAL TANDEM-BUILD EXCEPTION TRACE]:", error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -313,6 +325,7 @@ app.post('/api/run-workflow', async (req, res) => {
     const dynamicBrief = `### 🛰️ Secure Action Blueprint Dispatch\n* **Pipeline Status:** Verified & Executed\n\n#### Engine Pipeline Log:\n${executedStepsLog.join('\n')}\n\n#### 🤖 AI Intelligence Briefing:\n${aiSynthesisOutput}`;
     return res.json({ success: true, result: { final_brief: dynamicBrief } });
   } catch (error: any) {
+    console.error("❌ [SERVER ERROR ON RUN WORKFLOW]:", error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -330,7 +343,10 @@ app.get('/api/auditor-evidence', async (req, res) => {
       specIntegrityHash: l.specIntegrityHash
     }));
     return res.json({ success: true, evidence: { packageTitle: "AMANI LEDGER REPORT", generationTimestamp: new Date().toISOString(), historicalAuditTrails: formattedTrails } });
-  } catch (error: any) { return res.status(500).json({ error: error.message }); }
+  } catch (error: any) { 
+    console.error("❌ [SERVER ERROR ON EVIDENCE REPORT]:", error);
+    return res.status(500).json({ error: error.message }); 
+  }
 });
 
 // ─── 6. STANDARD BLUEPRINT PERSISTENCE ROUTES ───────────────────────
@@ -352,16 +368,45 @@ app.get('/api/blueprints', async (req, res) => {
 
 app.post('/api/knowledge-sync', (req, res) => res.json({ success: true }));
 
-// ─── WEARABLE TELEMETRY INGESTION ENDPOINT ───────────────────────────
-app.post('/api/wearable/sync', async (req, res) => {
+// ─── 📡 WEARABLE FITNESS INGESTION GATEWAY ENDPOINT ───────────────────
+app.post(['/api/wearable/v1/sync', '/api/wearable/sync'], async (req, res) => {
   try {
-    const { username, deviceName, currentHeartRate, stressLevelScore } = req.body;
-    const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) return res.status(404).json({ error: "User profile not found." });
+    const { username, hrv, restingHeartRate, sleepScore, deepSleepMins, remSleepMins, activityBurn, currentHeartRate, stressLevelScore } = req.body;
 
-    await prisma.smartDevice.create({ data: { deviceName, deviceType: "WEARABLE", currentHeartRate, stressLevelScore, userId: user.id } });
-    return res.json({ success: true, actionStatus: stressLevelScore > 75 ? "PAUSE_AND_DECOMPRESS_RECOMMENDED" : "PACING_NORMAL" });
-  } catch (error: any) { return res.status(500).json({ error: error.message }); }
+    const profile = await prisma.user.findUnique({ where: { username } });
+    if (!profile) {
+      return res.status(404).json({ success: false, error: "User profile context uninitialized." });
+    }
+
+    const finalHRV = hrv ? parseFloat(hrv) : (stressLevelScore ? (100 - parseInt(stressLevelScore)) : 55);
+    const finalRHR = restingHeartRate ? parseInt(restingHeartRate) : (currentHeartRate ? parseInt(currentHeartRate) : 70);
+
+    const snapshot = await prisma.biometricSnapshot.create({
+      data: {
+        userId: profile.id, 
+        hrv: finalHRV,
+        restingHeartRate: finalRHR,
+        sleepScore: sleepScore ? parseFloat(sleepScore) : null,
+        deepSleepMins: deepSleepMins ? parseInt(deepSleepMins) : null,
+        remSleepMins: remSleepMins ? parseInt(remSleepMins) : null,
+        activityBurn: activityBurn ? parseFloat(activityBurn) : null,
+      }
+    });
+
+    const evaluatedStress = stressLevelScore ? parseInt(stressLevelScore) : (finalHRV < 45 ? 85 : 50);
+    const actionStatus = evaluatedStress > 75 ? 'PAUSE_AND_DECOMPRESS_RECOMMENDED' : 'PACING_NORMAL';
+
+    return res.json({
+      success: true,
+      snapshotId: snapshot.id,
+      computedStressLevel: evaluatedStress,
+      actionStatus,
+      timestamp: snapshot.timestamp
+    });
+  } catch (error: any) {
+    console.error("❌ [SERVER ERROR ON WEARABLE DATA INGESTION]:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // ─── COMMUNITY HUB ROUTING SUB-MATRIX ────────────────────────────────
@@ -417,25 +462,26 @@ async function initializeServerLifecycle() {
   try {
     console.log("🔄 [PGlite SETUP] Bootstrapping WebAssembly physical table structures...");
     
+    // Explicitly wrapping structural identifiers in double quotes to map case-sensitive fields
     await pgliteDb.exec(`
-      CREATE TABLE IF NOT EXISTS "user" (
+      CREATE TABLE IF NOT EXISTS "User" (
         "id" TEXT PRIMARY KEY, "username" TEXT UNIQUE NOT NULL, "role" TEXT NOT NULL, "backgroundField" TEXT DEFAULT 'General' NOT NULL
       );
       CREATE TABLE IF NOT EXISTS "blueprint" (
         "id" TEXT PRIMARY KEY, "name" TEXT NOT NULL, "yamlConfig" TEXT NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "userId" TEXT NOT NULL,
-        FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE
+        FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       );
       CREATE TABLE IF NOT EXISTS "securecompliancelog" (
         "id" TEXT PRIMARY KEY, "event" TEXT NOT NULL, "timestamp" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "specIntegrityHash" TEXT NOT NULL, "roleContext" TEXT NOT NULL, "status" TEXT NOT NULL, "userId" TEXT NOT NULL,
-        FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE
+        FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       );
       CREATE TABLE IF NOT EXISTS "smartdevice" (
         "id" TEXT PRIMARY KEY, "deviceName" TEXT NOT NULL, "deviceType" TEXT NOT NULL, "currentHeartRate" INTEGER, "stressLevelScore" INTEGER, "lastSyncedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "userId" TEXT NOT NULL,
-        FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE
+        FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       );
       CREATE TABLE IF NOT EXISTS "communityhubpost" (
         "id" TEXT PRIMARY KEY, "title" TEXT NOT NULL, "content" TEXT NOT NULL, "tag" TEXT NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "userId" TEXT NOT NULL,
-        FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE
+        FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       );
       CREATE TABLE IF NOT EXISTS "externalstreamevent" (
         "id" TEXT PRIMARY KEY, "title" TEXT NOT NULL, "category" TEXT NOT NULL, "impactScore" INTEGER DEFAULT 50 NOT NULL, "geoLatitude" DOUBLE PRECISION, "geoLongitude" DOUBLE PRECISION, "estimatedStart" TIMESTAMP NOT NULL, "estimatedEnd" TIMESTAMP NOT NULL, "isPublicSafe" BOOLEAN DEFAULT true NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -446,6 +492,18 @@ async function initializeServerLifecycle() {
       CREATE TABLE IF NOT EXISTS "globalcyberalert" (
         "id" TEXT PRIMARY KEY, "title" TEXT NOT NULL, "cveId" TEXT, "severity" TEXT NOT NULL, "affectedComponent" TEXT NOT NULL, "remediationSteps" TEXT NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS "biometricsnapshot" (
+        "id" TEXT PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        "timestamp" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "hrv" DOUBLE PRECISION,
+        "restingHeartRate" INTEGER,
+        "sleepScore" DOUBLE PRECISION,
+        "deepSleepMins" INTEGER,
+        "remSleepMins" INTEGER,
+        "activityBurn" DOUBLE PRECISION,
+        FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+      );
     `);
     
     console.log("✨ [PGlite SETUP] WebAssembly storage definitions written successfully.");
@@ -453,11 +511,11 @@ async function initializeServerLifecycle() {
     // ─── 🔑 AUTO-SEED TEST PERSONAS ─────────────────────────────────
     console.log("🌱 [PGlite SETUP] Seeding multi-persona test accounts...");
     await pgliteDb.exec(`
-      INSERT INTO "user" ("id", "username", "role", "backgroundField") 
+      INSERT INTO "User" ("id", "username", "role", "backgroundField") 
       VALUES ('id_prof_amani', 'professor_amani', 'Academic_Faculty', 'General')
       ON CONFLICT ("username") DO NOTHING;
 
-      INSERT INTO "user" ("id", "username", "role", "backgroundField") 
+      INSERT INTO "User" ("id", "username", "role", "backgroundField") 
       VALUES ('id_parent_sync', 'parent_home_sync', 'Family_Lead', 'General')
       ON CONFLICT ("username") DO NOTHING;
     `);
@@ -467,7 +525,7 @@ async function initializeServerLifecycle() {
     app.listen(PORT, () => {
       console.log(`🚀 Governed Enterprise Engine online listening on port ${PORT}`);
     });
-   
+
   } catch (err: any) {
     console.error(`❌ Lifecycle execution halted due to bootstrap initialization crash: ${err.message}`);
   }
@@ -477,9 +535,8 @@ async function initializeServerLifecycle() {
 app.post('/api/iot/ambient-adjust', async (req, res) => {
   try {
     const { username, currentStressLevel } = req.body;
-    console.log(`🌿 [IoT CORE] Recieved bio-stress trigger override alert for [${username}]. Current Level: ${currentStressLevel}%`);
+    console.log(`🌿 [IoT CORE] Received bio-stress trigger override alert for [${username}]. Current Level: ${currentStressLevel}%`);
     
-    // Dynamically calculate mitigation pacing modes based on data score thresholds
     let activeAmbientMode = "STANDARD_ELEVATION_WARMTH";
     if (currentStressLevel > 85) {
       activeAmbientMode = "CRITICAL_DECOMPRESSION_SOOTHING_BLUE";
@@ -497,4 +554,5 @@ app.post('/api/iot/ambient-adjust', async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 });
+
 initializeServerLifecycle();
