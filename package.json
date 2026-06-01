@@ -6,6 +6,7 @@
   "scripts": {
     "server": "npx tsx src/server.ts",
     "autopilot": "npx tsx scripts/demo-autopilot.ts",
+    "test:advanced": "npx tsx scripts/test-advanced-loops.ts",
     "prisma:generate": "npx prisma generate"
   },
   "dependencies": {
