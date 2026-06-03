@@ -37,7 +37,7 @@ async function runAdvancedSuites() {
       console.log("✨ [SUCCESS] Cognitive engine self-healed the manifest natively!");
       console.log(`🤖 Healed Output Configuration:\n\n${res.data.healedYaml}\n`);
     } else {
-      console.log("✓ Guardrails caught violation, but no self-healing occurred (422 Handled).");
+      console.log("✓ Guardrails caught violation, but no self-healing occurred.");
     }
   } catch (err: any) {
     console.log(`🛑 Boundary Halt: Payload was rejected cleanly (${err.response?.status || err.message})`);
@@ -77,7 +77,6 @@ async function runAdvancedSuites() {
   };
 
   try {
-    // Note: Approvals routes bypass signature checks to simulate an admin override dashboard
     const res = await axios.post(`${API_BASE}/approvals/authorize`, authorizePayload);
     console.log(`📡 [SERVER RESPONSE]: ${res.data.message}`);
     console.log(`🚀 Dispatch State: [${res.data.executionStatus}] -> System is fully green!`);

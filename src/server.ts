@@ -29,6 +29,9 @@ const prisma = new PrismaClient({ adapter });
 // InMemory ticket tracker for pending Human-In-The-Loop actions
 const pendingHitlTickets = new Map<string, { yamlContent: string; userCredentials: any }>();
 
+// InMemory global systemic hazard mitigation state
+let activeThreatMitigationComponents: string[] = [];
+
 // 2. Safely capture the Gemini API Key from process environment memory variables
 const aiKey = process.env.GEMINI_API_KEY; 
 let ai: any = null;
@@ -61,6 +64,7 @@ app.use((req, res, next) => {
     req.path === '/api/community/feed' || 
     req.path === '/api/auditor-evidence' || 
     req.path.startsWith('/api/approvals') ||
+    req.path === '/api/security/cyber-alerts' ||
     req.path === '/dashboard' ||
     req.method === 'GET'
   ) {
@@ -119,7 +123,7 @@ function buildLiveConfigurationFilesOnDisk(detectedIntegrations: string[], specI
     
     const finalConfigurationPayload = {
       assetId: appLink,
-      deploymentStatus: "PROVISIONED_AND_LOCKED",
+      deploymentStatus: activeThreatMitigationComponents.includes(appLink) ? "ISOLATED_BY_THREAT_INTEL" : "PROVISIONED_AND_LOCKED",
       enforcedRegulations: ["NIST_800", "PCI_DSS_v4", "SOC2_TYPE_II", "FERPA", "COPPA"],
       orchestratorClearanceRole: role,
       cryptographicSignature: crypto.createHmac('sha256', MASTER_CRYPTOGRAPHIC_SEED).update(appLink + specIntegrityHash).digest('hex'),
@@ -188,10 +192,8 @@ async function attemptAISelfHealing(yamlContent: string, violations: string[], r
     });
     
     let rawText = response.text || "";
-    if (rawText.includes("```yaml")) rawText = rawText.split("
-```yaml")[1].split("```")[0];
-    else if (rawText.includes("```")) rawText = rawText.split("
-```")[1].split("```")[0];
+    if (rawText.includes("```yaml")) rawText = rawText.split("```yaml")[1].split("```")[0];
+    else if (rawText.includes("```")) rawText = rawText.split("```")[1].split("```")[0];
     return rawText.trim();
   } catch (err) {
     return null;
@@ -295,17 +297,25 @@ app.post('/api/run-workflow', async (req, res) => {
     let executedStepsLog: string[] = [];
     let aiPromptRole = "";
     let agentAutonomyMode = "fully_autonomous"; 
+    let activeMcpTarget = "";
 
     const lines = yamlContent ? yamlContent.split('\n') : [];
     lines.forEach((line: string) => {
       if (line.includes('prompt_role:')) aiPromptRole = line.substring(line.indexOf('prompt_role:') + 12).replace(/"/g, '').trim();
       if (line.includes('execution_mode:')) agentAutonomyMode = line.split('execution_mode:')[1].replace(/"/g, '').trim();
+      if (line.includes('mcp_server:')) activeMcpTarget = line.split('mcp_server:')[1].replace(/"/g, '').trim();
       if (line.includes('primitive: "email"')) executedStepsLog.push("✓ **Communication Gate:** Formatted outbound template notification.");
       if (line.includes('primitive: "task"')) executedStepsLog.push("✓ **Task Registry Controller:** Logged tracking tickets.");
     });
 
+    // 🚨 THREAT INTEL INTERCEPT OVERRIDE
+    if (activeMcpTarget && activeThreatMitigationComponents.includes(activeMcpTarget)) {
+      console.warn(`🛡️ [THREAT DEFENSE ACTIVATED] Forcing HITL isolation step on target asset module: [${activeMcpTarget}]`);
+      agentAutonomyMode = "semi_autonomous";
+    }
+
     // Handle explicit configuration blocks or fallback if execution mode requests validation bounds
-    if (yamlContent && yamlContent.includes('execution_mode: "semi_autonomous"') && !hitlApprovalTicketId) {
+    if (agentAutonomyMode === "semi_autonomous" && !hitlApprovalTicketId) {
       const generateId = `ticket_${Date.now()}`;
       pendingHitlTickets.set(generateId, { yamlContent, userCredentials });
 
@@ -347,6 +357,37 @@ app.post('/api/run-workflow', async (req, res) => {
   }
 });
 
+// ─── 📡 GLOBAL CYBER ALERT REALTIME FEED INGESTION ──────────────────
+app.post('/api/security/cyber-alerts', async (req, res) => {
+  try {
+    const { title, cveId, severity, affectedComponent, remediationSteps } = req.body;
+    
+    const alert = await prisma.globalCyberAlert.create({
+      data: { title, cveId, severity, affectedComponent, remediationSteps }
+    });
+
+    if (severity === 'CRITICAL' || severity === 'HIGH') {
+      if (!activeThreatMitigationComponents.includes(affectedComponent)) {
+        activeThreatMitigationComponents.push(affectedComponent);
+        console.log(`🚨 [SYS HAZARD ALERT] Component [${affectedComponent}] registered under active lockdown isolation.`);
+      }
+    }
+
+    return res.json({ success: true, alertId: alert.id, systemicStatus: "THREAT_DATABASE_UPDATED" });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/security/cyber-alerts', async (req, res) => {
+  try {
+    const alerts = await prisma.globalCyberAlert.findMany({ orderBy: { createdAt: 'desc' } });
+    return res.json({ success: true, alerts, isolatedComponents: activeThreatMitigationComponents });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // ─── 🛡️ HUMAN IN THE LOOP (HITL) ADMINISTRATIVE INTERCEPTS ──────────
 app.get('/api/approvals/pending', (req, res) => {
   const list = Array.from(pendingHitlTickets.entries()).map(([id, data]) => ({
@@ -360,7 +401,7 @@ app.get('/api/approvals/pending', (req, res) => {
 
 app.post('/api/approvals/authorize', async (req, res) => {
   try {
-    const { ticketId, action } = req.body; // action: 'APPROVE' | 'REJECT'
+    const { ticketId, action } = req.body; 
     const match = pendingHitlTickets.get(ticketId);
 
     if (!match) {
@@ -377,7 +418,6 @@ app.post('/api/approvals/authorize', async (req, res) => {
       return res.json({ success: true, message: `Workflow sequence associated with ticket ${ticketId} discarded safely.` });
     }
 
-    // Process approval by forwarding structural flow back to execution layer parameters
     pendingHitlTickets.delete(ticketId);
     await prisma.secureComplianceLog.create({
       data: { event: "HITL_WORKFLOW_APPROVED", specIntegrityHash: "approved_token", roleContext: match.userCredentials.role, status: "COMPLIANT_SUCCESS", userId: tenantUser.id }
@@ -603,11 +643,12 @@ app.get('/dashboard', (req, res) => {
             </div>
           </div>
         </div>
-        <div class="mt-6 border-t border-slate-800 pt-4">
-          <div class="text-xs text-slate-500 flex justify-between items-center">
-            <span>Enterprise Mesh Engine:</span>
-            <span class="text-emerald-400 font-mono">ONLINE // COMPLIANT</span>
-          </div>
+      </section>
+
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <h2 class="text-sm font-bold tracking-wider text-slate-400 uppercase mb-3">⚠️ System Isolation Matrix</h2>
+        <div id="isolation-container" class="space-y-2 text-xs">
+          <div class="text-slate-500 italic">No components isolated by active threat intel vectors.</div>
         </div>
       </section>
     </div>
@@ -618,7 +659,7 @@ app.get('/dashboard', (req, res) => {
 
     async function fetchHitlTickets() {
       try {
-        const response = await fetch(\`\${API_BASE}/approvals/pending\`);
+        const response = await fetch(API_BASE + '/approvals/pending');
         const data = await response.json();
         const container = document.getElementById('hitl-container');
         const badge = document.getElementById('hitl-count');
@@ -626,38 +667,29 @@ app.get('/dashboard', (req, res) => {
         if (!data.success || data.tickets.length === 0) {
           badge.textContent = '0 Pending';
           badge.className = 'px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700';
-          container.innerHTML = \`
-            <div class="text-sm text-slate-500 py-6 text-center border border-dashed border-slate-800 rounded-lg">
-              No active Human-In-The-Loop workflow exceptions intercepted. Systems idling normally.
-            </div>\`;
+          container.innerHTML = '<div class="text-sm text-slate-500 py-6 text-center border border-dashed border-slate-800 rounded-lg">No active Human-In-The-Loop workflow exceptions intercepted. Systems idling normally.</div>';
           return;
         }
 
-        badge.textContent = \`\${data.tickets.length} Pending\`;
+        badge.textContent = data.tickets.length + ' Pending';
         badge.className = 'px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs font-mono border border-amber-500/20';
         
-        container.innerHTML = data.tickets.map(ticket => \`
-          <div class="bg-slate-950 border border-slate-800/80 rounded-lg p-4 space-y-3">
-            <div class="flex items-center justify-between text-xs">
-              <div class="text-slate-400">ID: <span class="text-slate-200 font-mono font-bold">\${ticket.ticketId}</span></div>
-              <div class="px-2 py-0.5 rounded bg-slate-900 text-amber-400 font-mono font-medium border border-slate-800">\${ticket.roleContext}</div>
-            </div>
-            <div class="text-sm text-slate-300">
-              Operator <span class="text-cyan-400 font-semibold font-mono">\${ticket.operator}</span> requested a semi-autonomous action loop execution.
-            </div>
-            <div class="bg-slate-900 p-3 rounded border border-slate-800/50">
-              <pre class="text-xs text-slate-400 overflow-x-auto whitespace-pre-wrap font-mono">\---\n\${ticket.yamlConfig}</pre>
-            </div>
-            <div class="flex items-center space-x-3 pt-1">
-              <button onclick="resolveTicket('\${ticket.ticketId}', 'APPROVE')" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs py-2 px-4 rounded transition cursor-pointer">
-                Authorize Stream Dispatch
-              </button>
-              <button onclick="resolveTicket('\${ticket.ticketId}', 'REJECT')" class="bg-slate-900 hover:bg-slate-800 text-rose-400 font-medium text-xs py-2 px-4 rounded border border-slate-800 transition cursor-pointer">
-                Reject
-              </button>
-            </div>
-          </div>
-        \`).join('');
+        container.innerHTML = data.tickets.map(ticket => {
+          return '<div class="bg-slate-950 border border-slate-800/80 rounded-lg p-4 space-y-3">' +
+            '<div class="flex items-center justify-between text-xs">' +
+              '<div class="text-slate-400">ID: <span class="text-slate-200 font-mono font-bold">' + ticket.ticketId + '</span></div>' +
+              '<div class="px-2 py-0.5 rounded bg-slate-900 text-amber-400 font-mono font-medium border border-slate-800">' + ticket.roleContext + '</div>' +
+            '</div>' +
+            '<div class="text-sm text-slate-300">Operator <span class="text-cyan-400 font-semibold font-mono">' + ticket.operator + '</span> requested action execution.</div>' +
+            '<div class="bg-slate-900 p-3 rounded border border-slate-800/50">' +
+              '<pre class="text-xs text-slate-400 overflow-x-auto whitespace-pre-wrap font-mono">---\\n' + ticket.yamlConfig + '</pre>' +
+            '</div>' +
+            '<div class="flex items-center space-x-3 pt-1">' +
+              '<button onclick="resolveTicket(\'' + ticket.ticketId + '\', \'APPROVE\')" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs py-2 px-4 rounded transition cursor-pointer">Authorize Stream Dispatch</button>' +
+              '<button onclick="resolveTicket(\'' + ticket.ticketId + '\', \'REJECT\')" class="bg-slate-900 hover:bg-slate-800 text-rose-400 font-medium text-xs py-2 px-4 rounded border border-slate-800 transition cursor-pointer">Reject</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
       } catch (err) {
         console.error("Error updating HITL matrix components:", err);
       }
@@ -665,26 +697,24 @@ app.get('/dashboard', (req, res) => {
 
     async function resolveTicket(ticketId, action) {
       try {
-        const response = await fetch(\`\${API_BASE}/approvals/authorize\`, {
+        const response = await fetch(API_BASE + '/approvals/authorize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticketId, action })
+          body: JSON.stringify({ ticketId: ticketId, action: action })
         });
         const data = await response.json();
         if (data.success) {
           fetchHitlTickets();
           fetchAuditorData();
-        } else {
-          alert("Authorization override failed: " + data.error);
         }
       } catch (err) {
-        alert("Network failure processing admin action ticket.");
+        console.error(err);
       }
     }
 
     async function fetchAuditorData() {
       try {
-        const response = await fetch(\`\${API_BASE}/auditor-evidence\`);
+        const response = await fetch(API_BASE + '/auditor-evidence');
         const data = await response.json();
         
         if (!data.success) return;
@@ -702,22 +732,31 @@ app.get('/dashboard', (req, res) => {
           if (log.status === 'BLOCKED_VIOLATION' || log.event === 'HITL_WORKFLOW_REJECTED') badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
           if (log.status === 'PENDING_HITL' || log.event === 'EXECUTION_PAUSED_HITL') badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
 
-          return \`
-            <tr class="hover:bg-slate-900/30 transition text-slate-300">
-              <td class="py-3 px-4 font-mono text-xs">\${log.operator}</td>
-              <td class="py-3 px-4 font-medium font-mono text-xs">\${log.event}</td>
-              <td class="py-3 px-4 font-mono text-xs text-slate-500">\${log.specIntegrityHash.substring(0, 12)}...</td>
-              <td class="py-3 px-4 text-right">
-                <span class="px-2 py-0.5 rounded text-xs font-mono font-medium border \${badgeClass}">\${log.status}</span>
-              </td>
-            </tr>\`;
+          return '<tr class="hover:bg-slate-900/30 transition text-slate-300">' +
+              '<td class="py-3 px-4 font-mono text-xs">' + log.operator + '</td>' +
+              '<td class="py-3 px-4 font-medium font-mono text-xs">' + log.event + '</td>' +
+              '<td class="py-3 px-4 font-mono text-xs text-slate-500">' + log.specIntegrityHash.substring(0, 12) + '...</td>' +
+              '<td class="py-3 px-4 text-right">' +
+                '<span class="px-2 py-0.5 rounded text-xs font-mono font-medium border ' + badgeClass + '">' + log.status + '</span>' +
+              '</td>' +
+            '</tr>';
         }).reverse().join('');
 
-        document.getElementById('telemetry-rows').innerHTML = rows || \`
-          <tr><td colspan="4" class="py-6 px-4 text-center text-slate-500">No telemetry log footprints found in storage memory.</td></tr>\`;
-          
+        document.getElementById('telemetry-rows').innerHTML = rows;
         document.getElementById('metric-compliant').textContent = compliantCount;
         document.getElementById('metric-healed').textContent = healedCount;
+
+        const threatRes = await fetch(API_BASE + '/security/cyber-alerts');
+        const threatData = await threatRes.json();
+        const isoContainer = document.getElementById('isolation-container');
+        if (threatData.success && threatData.isolatedComponents.length > 0) {
+          isoContainer.innerHTML = threatData.isolatedComponents.map(c => {
+            return '<div class="p-2 rounded bg-rose-950/40 text-rose-400 border border-rose-900/50 font-mono flex justify-between items-center">' +
+              '<span>⚠️ ' + c + '</span>' +
+              '<span class="text-[10px] bg-rose-500/20 px-1 py-0.5 rounded">HITL_ISOLATION</span>' +
+            '</div>';
+          }).join('');
+        }
       } catch (err) {
         console.error("Downstream ledger pull failed:", err);
       }
@@ -783,7 +822,6 @@ async function initializeServerLifecycle() {
     
     console.log("✨ [PGlite SETUP] WebAssembly storage definitions written successfully.");
 
-    // ─── 🔑 AUTO-SEED TEST PERSONAS ─────────────────────────────────
     console.log("🌱 [PGlite SETUP] Seeding multi-persona test accounts...");
     await pgliteDb.exec(`
       INSERT INTO "User" ("id", "username", "role", "backgroundField") 
@@ -797,7 +835,7 @@ async function initializeServerLifecycle() {
     console.log("✓ [PGlite SETUP] Seeding complete.");
     
   } catch (err: any) {
-    console.error(`❌ Lifecycle execution halted due to bootstrap initialization crash: ${err.message}`);
+    console.error("❌ Lifecycle execution halted due to bootstrap initialization crash: " + err.message);
   }
 }
 
@@ -826,20 +864,20 @@ app.post('/api/iot/ambient-adjust', async (req, res) => {
 });
 
 // ─── 📡 AUTOMATED AUTOPILOT TELEMETRY FALLBACK OVERRIDES ───────────
-app.post('/api/telemetry*', (req, res) => {
+app.use('/api/telemetry', (req, res) => {
   return res.json({ success: true, status: "TELEMETRY_FRAME_ACKNOWLEDGED" });
 });
  
-app.post('/api/streams/frame*', (req, res) => {
+app.use('/api/streams/frame', (req, res) => {
   return res.json({ success: true, status: "STREAM_FRAME_ACKNOWLEDGED" });
 });
  
-app.post('/api/compliance-log*', (req, res) => {
+app.use('/api/compliance-log', (req, res) => {
   return res.json({ success: true, status: "COMPLIANCE_LOG_ACKNOWLEDGED" });
 });
 
 const PORT = 3000;
 app.listen(PORT, async () => {
   await initializeServerLifecycle();
-  console.log(`🚀 Governed Enterprise Engine online listening on port ${PORT}`);
+  console.log("🚀 Governed Enterprise Engine online listening on port " + PORT);
 });
