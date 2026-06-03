@@ -1,6 +1,23 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import WorkflowCanvas from '../components/WorkflowCanvas';
+import React, { useState, useEffect } from 'react';
+// ... any other existing imports at the top of the file ...
+
+// ─── 📡 DYNAMIC CLOUD ENVIRONMENT GATEWAY RESOLUTION ─────────────────
+const isProduction = window.location.hostname === 'amaniguide.eds-360.com';
+
+const BACKEND_URL = isProduction 
+  ? import.meta.env.VITE_PROD_API_BASE 
+  : import.meta.env.VITE_DEV_API_BASE;
+
+const API_BASE = `${BACKEND_URL}/api`;
+
+console.log(`📡 [AMANI CORE] Routing system telemetry straight to gateway: ${API_BASE}`);
+// ─────────────────────────────────────────────────────────────────────
+
+export default function Dashboard() {
+  // Your existing dashboard code continues below...
 
 export default function Dashboard() {
   const [blueprints, setBlueprints] = useState<any[]>([]);
