@@ -1,39 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 export default function UserHomepage() {
-  // Mock active state for an logged-in user context
-  const [userProfile, setUserProfile] = useState({
+  // Catch incoming tokens straight from the OAuth redirect parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const provider = urlParams.get('provider');
+  const token = urlParams.get('token');
+
+  const [userProfile] = useState({
     username: 'professor_amani',
     role: 'Academic_Faculty',
     backgroundField: 'Computer Science',
     isMfaActive: true
   });
 
-  const [biometrics, setBiometrics] = useState({
-    hrv: 62,
-    restingHeartRate: 68,
-    sleepScore: 84,
-    stressLevel: 'PACING_NORMAL'
-  });
-
-  const [blueprints, setBlueprints] = useState([
+  const [blueprints] = useState([
     { id: 'bp_1', name: 'Academic_Grades_v1', status: 'SYNCHRONIZED', date: '2026-06-02' },
     { id: 'bp_2', name: 'Canvas_Sync_Pipeline', status: 'PAUSED_HITL', date: '2026-06-03' }
   ]);
 
-  const [announcements, setAnnouncements] = useState([
+  const [announcements] = useState([
     { id: 1, tag: 'SECURITY', title: 'Zero-Trust Protocol Enforced Globally', desc: 'All administrative and pipeline execution endpoints now require physical security token confirmation.' },
     { id: 2, tag: 'SYSTEM', title: 'PGlite WebAssembly Engine Upgraded', desc: 'Localized database transaction performance optimized for real-time edge processing nodes.' }
   ]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-900">
+      
       {/* 🧭 Top Navigation Array */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="h-3 w-3 rounded-full bg-cyan-400"></div>
           <h1 className="text-lg font-semibold tracking-tight text-slate-100">
-            AMANI // <span class="text-cyan-400 font-medium">WORKSPACE CORE</span>
+            AMANI // <span className="text-cyan-400 font-medium">WORKSPACE CORE</span>
           </h1>
         </div>
         <div className="flex items-center space-x-4">
@@ -71,7 +69,7 @@ export default function UserHomepage() {
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold tracking-wider text-slate-400 uppercase">My Automation Blueprints</h3>
-              <button className="text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold py-1.5 px-3 rounded transition tracking-wide">
+              <button className="text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold py-1.5 px-3 rounded transition tracking-wide cursor-pointer">
                 + Deploy New YAML
               </button>
             </div>
@@ -121,24 +119,49 @@ export default function UserHomepage() {
           {/* ❤️ Biometric Snapshot Panel */}
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
             <h3 className="text-sm font-bold tracking-wider text-slate-400 uppercase mb-4">Biometric Strain Index</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-950 p-3 border border-slate-800/80 rounded-lg">
-                  <div className="text-[10px] text-slate-500 font-medium uppercase">HRV Status</div>
-                  <div className="text-lg font-bold text-slate-200 font-mono mt-0.5">{biometrics.hrv} <span className="text-xs text-slate-500 font-normal">ms</span></div>
-                </div>
-                <div className="bg-slate-950 p-3 border border-slate-800/80 rounded-lg">
-                  <div className="text-[10px] text-slate-500 font-medium uppercase">Resting HR</div>
-                  <div className="text-lg font-bold text-slate-200 font-mono mt-0.5">{biometrics.restingHeartRate} <span className="text-xs text-slate-500 font-normal">bpm</span></div>
+            
+            {!token ? (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Pair your secure operational workspace with live telemetry updates to gate your pipeline autonomies against stress spikes:
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  <a href="/api/auth/oura" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs py-2.5 px-4 rounded transition text-center block tracking-wide">
+                    🦪 Connect Oura Ring Account
+                  </a>
+                  <a href="/api/auth/whoop" className="bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs py-2.5 px-4 rounded transition text-center block tracking-wide">
+                    🚀 Connect WHOOP Strap Account
+                  </a>
                 </div>
               </div>
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-between">
-                <div className="text-xs text-slate-400">Ambient Control State:</div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {biometrics.stressLevel}
-                </span>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-950 p-3 border border-slate-800/80 rounded-lg">
+                    <div className="text-[10px] text-slate-500 font-medium uppercase">HRV Status</div>
+                    <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">64 <span className="text-xs text-slate-500 font-normal">ms</span></div>
+                  </div>
+                  <div className="bg-slate-950 p-3 border border-slate-800/80 rounded-lg">
+                    <div className="text-[10px] text-slate-500 font-medium uppercase">Resting HR</div>
+                    <div className="text-lg font-bold text-slate-200 font-mono mt-0.5">62 <span className="text-xs text-slate-500 font-normal">bpm</span></div>
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-between">
+                  <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Live Stream: <span className="font-mono text-cyan-400 uppercase font-bold">{provider}</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    PACING_NORMAL
+                  </span>
+                </div>
+                
+                <div className="text-[10px] text-slate-500 font-mono overflow-hidden text-ellipsis whitespace-nowrap bg-slate-950/40 p-2 rounded border border-slate-800/40">
+                  Token: {token}
+                </div>
               </div>
-            </div>
+            )}
           </section>
 
           {/* 🔑 Cryptographic Hardware Keys Keyring */}
@@ -154,11 +177,11 @@ export default function UserHomepage() {
               </div>
               
               {userProfile.isMfaActive ? (
-                <div className="text-[11px] text-emerald-500 bg-emerald-950/20 border border-emerald-900/40 p-2 rounded text-center font-medium">
+                <div className="text-[11px] text-emerald-500 bg-emerald-950/10 border border-emerald-900/30 p-2.5 rounded text-center font-medium leading-normal">
                   ✓ FIDO2 Hardware enforcement enabled for all pipeline release scripts.
                 </div>
               ) : (
-                <button className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 px-4 rounded border border-slate-700 transition">
+                <button className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 px-4 rounded border border-slate-700 transition cursor-pointer">
                   Register Token Key
                 </button>
               )}
